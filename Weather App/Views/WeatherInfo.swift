@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct WeatherInfoView: View {
+struct WeatherInfo: View {
     
     let icon : String
     let title : String
@@ -23,5 +23,5 @@ struct WeatherInfoView: View {
 }
 
 #Preview {
-    WeatherInfoView(icon: "wind", title: "Wind", value: "30")
+    WeatherInfo(icon: "wind", title: "Wind", value: "30")
 }
