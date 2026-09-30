@@ -1,19 +1,11 @@
-//
-//  ContentView.swift
-//  Weather App
-//
-//  Created by Свят on 28.09.26.
-//
-
 import SwiftUI
+internal import _LocationEssentials
 
 struct ContentView: View {
     
-    @State private var weather : WeatherResponse?
-    @State private var isLoading = false
-    @State private var errorMessage : String?
-    @State private var city = "Brest"
-    @State private var searchText = ""
+    @State private var viewModel = WeatherViewModel()
+    
+    @State private var isShowingSearch = false
     
     var body: some View {
         NavigationStack {
@@ -21,42 +13,44 @@ struct ContentView: View {
                 LinearGradient(colors: [.blue.opacity(0.15),.white], startPoint: .top, endPoint: .bottom)
                     .ignoresSafeArea()
                 
-                VStack(spacing: 20) {
-                    searchBar
-                    
-                    content
+                ScrollView {
+                    VStack(spacing: 20) {
+                        content
+                    }
+                    .padding(.vertical)
+                }
+                .navigationTitle("Weather")
+                .refreshable {
+                    await viewModel.loadWeather(for: viewModel.city)
+                }
+                .navigationDestination(isPresented: $isShowingSearch) {
+                    CitySearchView(viewModel: viewModel)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        searchButton
+                    }
                 }
             }
-            .refreshable {
-                await loadWeather(for: city)
-            }
-            .navigationTitle("Weather")
         }
         .task {
-            await loadWeather(for: city)
+            await viewModel.loadWeather(for: viewModel.city)
         }
     }
     
-    private var searchBar : some View {
-        HStack {
-            TextField("Enter city", text: $searchText)
-                .textFieldStyle(.roundedBorder)
-            
-            Button {
-                searchCity()
-            } label: {
-                Image(systemName: "magnifyingglass")
-            }
-            .buttonStyle(.glassProminent)
+    private var searchButton : some View {
+        Button {
+            isShowingSearch = true
+        } label: {
+            Image(systemName: "magnifyingglass")
         }
-        .padding(.horizontal)
     }
     
     @ViewBuilder
     private var content : some View {
-        if isLoading {
+        if viewModel.isLoading {
             ProgressView("Loading...")
-        } else if let errorMessage {
+        } else if let errorMessage = viewModel.errorMessage {
             VStack(spacing: 15) {
                 Image(systemName: "exclamationmark.triangle")
                     .font(.largeTitle)
@@ -70,48 +64,14 @@ struct ContentView: View {
                 
                 Button("Try again") {
                     Task {
-                        await loadWeather(for: city)
+                        await viewModel.loadWeather(for: viewModel.city)
                     }
                 }
                 .buttonStyle(.glassProminent)
             }
             .padding()
-        } else if let weather {
-            WeatherContent(weather: weather, city: city)
-        }
-    }
-    
-    private func loadWeather(for cityName : String) async {
-        isLoading = true
-        errorMessage = nil
-        
-        do {
-            let weatherService = WeatherServices()
-            
-            let location = try await weatherService
-                .searchCity(name: cityName)
-            
-            let result = try await weatherService
-                .fetchWeather(latitude: location.latitude, longitude: location.longitude)
-            
-            weather = result
-            city = cityName
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        
-        isLoading = false
-    }
-    
-    private func searchCity() {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        guard !query.isEmpty else {
-            return
-        }
-        
-        Task {
-            await loadWeather(for: query)
+        } else if let weather = viewModel.weather {
+            WeatherContent(weather: weather, city: viewModel.city)
         }
     }
 }

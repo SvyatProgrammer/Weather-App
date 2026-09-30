@@ -34,7 +34,7 @@ struct ForecastCard: View {
         }
         .frame(width: 130)
         .padding()
-        .background(.white.opacity(0.7))
+        .background(.background.opacity(0.7))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 }
